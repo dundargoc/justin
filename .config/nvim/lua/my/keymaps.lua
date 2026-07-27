@@ -151,10 +151,12 @@ inoremap [, [<CR>],<Esc>O
 "   - clearmatches()
 "   - :diffupdate
 "   - :syncbind
+"   - clear multicursors
 " Use {count}<C-L> to also:
 "   - clear all extmark namespaces
 nnoremap <silent><expr> <C-L> (v:count ? '<cmd>call clearmatches()\|call nvim_buf_clear_namespace(0,-1,0,-1)<cr>' : '')
       \ .. '<cmd>nohlsearch\|diffupdate\|syncbind'
+      \ .. '\|call nvim_buf_clear_namespace(0, nvim_create_namespace("nvim.multicursor"), 0, -1)'
       \ .. '<CR><C-L>'
 
 nnoremap <silent> yoz :<c-u>if &foldenable && 2==&foldnestmax && 0==&foldlevel\|set nofoldenable\|

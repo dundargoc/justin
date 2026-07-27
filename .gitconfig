@@ -84,6 +84,7 @@
   detachedHead = false
   statusHints = false
   skippedCherryPicks = false
+  forceDeleteBranch = false
 [feature]
   manyFiles = true
 [color]
