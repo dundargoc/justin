@@ -186,7 +186,6 @@ nnoremap <leader>== <cmd>set paste<cr>o<cr><c-r>=repeat('=',80)<cr><cr><c-r>=str
 -- run closest zig test case: https://github.com/mfussenegger/dotfiles/commit/8e827b72e2b72e7fb240e8a270d786cffc38a2a5#diff-7d18f76b784e0cb761b7fc0a995680cf2a27b6f77031b60b854248478aed8b6fR5
 -- run closest neovim lua test case via make: https://github.com/mfussenegger/dotfiles/commit/a32190b76b678517849d6da84d56836d44a22f2d#diff-f81a3d06561894224d8353f9babc6a7fa9b4962a40c191eb5c23c9cdcc6004c0R158
 vim.cmd([[nnoremap mT mT:FocusDispatch VIMRUNTIME= TEST_COLORS=0 TEST_FILE=<c-r>% TEST_FILTER= TEST_TAG= make CMAKE_EXTRA_FLAGS="-DENABLE_UNIBILIUM=0 -DENABLE_LTO=0" functionaltest<S-Left><S-Left><S-Left><S-Left><S-Left><Left>]])
--- nnoremap <silent> yr  :<c-u>set opfunc=<sid>tmux_run_operator<cr>g@
 
 -- g?: Web search
 vim.keymap.set('n', 'g??', function()

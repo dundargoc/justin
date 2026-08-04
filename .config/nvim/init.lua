@@ -657,13 +657,9 @@ local function config_term()
     if n > 0 then
       -- OSC 7: dir-change
       local dir = val
-      if vim.fn.isdirectory(dir) == 0 then
-        vim.notify('invalid dir: '..dir)
-        return
-      end
-      vim.b[ev.buf].osc7_dir = dir
+      assert(vim.fn.isdirectory(dir) ~= 0, 'invalid dir: '..dir)
       if vim.api.nvim_get_current_buf() == ev.buf then
-        vim.cmd.lcd(dir)
+        vim.cmd.bcd(dir)
       end
     end
   end)
