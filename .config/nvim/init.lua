@@ -739,4 +739,48 @@ else
   config_theme()
 end
 
+if vim.fn.exists('##CmdAtom') == 1 then
+  -- Note:
+  -- - type=ex is ignored because you can already repeat that via "@:".
+  vim.api.nvim_create_autocmd({'CmdAtom'}, {
+    -- pattern = { 'motion', 'mapping' },
+    group = augroup,
+    ---@param ev {data: vim.event.cmdatom.data}
+    callback = function(ev)
+      if ev.data.lhs and ev.data.lhs ~= ','
+        and (ev.data.type == 'motion' or ev.data.type == 'mapping')
+        and (#ev.data.lhs > 1 or (ev.data.lhs == '' and #ev.data.keys > 1))
+      then
+        vim.g.my_last = ev.data
+      else
+        if vim.g.debug then
+          local oneline = table.concat(vim.split(vim.inspect(ev.data), '%s*\n%s*'), ' ')
+          vim.print(('last: %s'):format(oneline))
+        end
+      end
+    end,
+  })
+  vim.keymap.set('n', ',', function()
+    local last = vim.g.my_last
+    -- Replay verbatim.  Not "typed": does not re-emit (feedback loop).
+    if last then
+      local keys = tostring(last.count or '') .. (last.lhs and last.lhs or last.keys)
+      vim.api.nvim_feedkeys(keys, '', true)
+      if vim.g.debug then
+        local oneline = table.concat(vim.split(vim.inspect(vim.g.my_last), '%s*\n%s*'), ' ')
+        vim.print(('last: sent "%s", %s'):format(keys, oneline))
+      end
+    else
+      if vim.g.debug then
+        vim.print('no `last`')
+      end
+    end
+  end)
+end
+
+vim.g.guh_debug = 'debug'
+vim.keymap.set('n', 'gb', function()
+  require('guh.util').goto_file_at_cursor()
+end, opts)
+
 vim.cmd[[silent! source ~/.vimrc.local]]
