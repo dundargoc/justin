@@ -88,7 +88,7 @@ func! s:zoom_toggle(cnt) abort
     let t:zoom_restore = restore_cmd
   endif
 endfunc
-nnoremap +     :<C-U>call <SID>zoom_toggle(v:count)<CR>
+nnoremap +     <cmd>call <SID>zoom_toggle(v:count)<CR>
 nnoremap <Bar> <cmd>ZenMode<cr>
 
 augroup config_winning
