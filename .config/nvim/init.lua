@@ -287,7 +287,6 @@ vim.pack.add{
 
   'https://github.com/tpope/vim-surround',
 
-  'https://github.com/tpope/vim-repeat',
   'https://github.com/tpope/vim-eunuch',
   'https://github.com/tpope/vim-rsi',
 
@@ -740,47 +739,99 @@ else
 end
 
 if vim.fn.exists('##CmdAtom') == 1 then
-  -- Note:
-  -- - type=ex is ignored because you can already repeat that via "@:".
-  vim.api.nvim_create_autocmd({'CmdAtom'}, {
+  local last_atom ---@type vim.event.cmdatom.data?
+  local last_edit ---@type vim.event.cmdatom.data?
+  local maxseq = {} ---@type table<integer, integer>
+
+  vim.api.nvim_create_autocmd('CmdAtom', {
     -- pattern = { 'motion', 'mapping' },
     group = augroup,
     ---@param ev {data: vim.event.cmdatom.data}
     callback = function(ev)
-      if ev.data.lhs and ev.data.lhs ~= ','
-        and (ev.data.type == 'motion' or ev.data.type == 'mapping')
-        and (#ev.data.lhs > 1 or (ev.data.lhs == '' and #ev.data.keys > 1))
-      then
-        vim.g.my_last = ev.data
-      else
-        if vim.g.debug then
-          local oneline = table.concat(vim.split(vim.inspect(ev.data), '%s*\n%s*'), ' ')
-          vim.print(('last: %s'):format(oneline))
+      local atom = ev.data
+      local is_redo_or_undo = atom.changed and (atom.undoseq or 0) <= (maxseq[ev.buf] or 0)
+      maxseq[ev.buf] = vim.fn.undotree(ev.buf).seq_last
+      if atom.keys == '' then
+        -- Unreplayable Visual op.
+      elseif atom.changed and not is_redo_or_undo and atom.lhs ~= '.' then
+        last_edit = atom
+      elseif not atom.changed and not is_redo_or_undo and atom.lhs ~= ',' then
+        last_atom = atom
+      elseif vim.g.debug then
+        local oneline = table.concat(vim.split(vim.inspect(atom), '%s*\n%s*'), ' ')
+        vim.print(('skipped: %s'):format(oneline))
+      end
+    end,
+  })
+
+  ---@param atom? vim.event.cmdatom.data
+  local function replay(atom)
+    if not atom then
+      vim.print('no `atom`')
+      return
+    end
+    local keys = atom.keys or atom.lhs
+    vim.schedule(function()
+      vim.api.nvim_feedkeys(keys, atom.keys and 'n' or 'm', false)
+      if vim.g.debug then
+        local oneline = table.concat(vim.split(vim.inspect(atom), '%s*\n%s*'), ' ')
+        vim.print(('atom: sent "%s", %s'):format(keys, oneline))
+      end
+    end)
+  end
+
+  vim.keymap.set('n', ',', function()
+    replay(last_atom)
+  end)
+
+  vim.keymap.set('n', '.', function()
+    replay(last_edit)
+  end)
+
+  -- Track the last 20 atoms.
+  local atom_ring = {} ---@type vim.event.cmdatom.data[]
+  vim.api.nvim_create_autocmd('CmdAtom', {
+    callback = function(ev)
+      -- Skip this mapping itself, and cmdwin edits.
+      if ev.data.lhs ~= ' ' and vim.fn.getcmdwintype() == '' then
+        atom_ring[#atom_ring + 1] = ev.data
+        if #atom_ring > 20 then
+          table.remove(atom_ring, 1)
         end
       end
     end,
   })
-  vim.keymap.set('n', ',', function()
-    local last = vim.g.my_last
-    -- Replay verbatim.  Not "typed": does not re-emit (feedback loop).
-    if last then
-      local keys = tostring(last.count or '') .. (last.lhs and last.lhs or last.keys)
-      vim.api.nvim_feedkeys(keys, '', true)
-      if vim.g.debug then
-        local oneline = table.concat(vim.split(vim.inspect(vim.g.my_last), '%s*\n%s*'), ' ')
-        vim.print(('last: sent "%s", %s'):format(keys, oneline))
+  -- [count]<space> shows a cmdwin where the user can edit/save the last [count] atoms as a "macro".
+  -- <space> (no count) replays it.
+  vim.keymap.set('n', '<Space>', function()
+    local count = vim.v.count
+    -- CmdAtom is deferred; schedule it so pending events land in the ring first.
+    vim.schedule(function()
+      count = math.min(count, #atom_ring)
+      if count == 0 then -- Replay the saved macro.
+        for _, step in ipairs(vim.g.atom_macro or {}) do
+          vim.api.nvim_feedkeys(vim.keycode(step.keys or step.lhs), step.keys and 'n' or 'm', false)
+        end
+        return
       end
-    else
-      if vim.g.debug then
-        vim.print('no `last`')
+      local parts = {}
+      for i = #atom_ring - count + 1, #atom_ring do
+        local a = atom_ring[i]
+        local keys = a.keys or ('%s%s'):format(a.count or '', a.lhs)
+        local field = a.keys and 'keys' or 'lhs'
+        parts[#parts + 1] = ('{%s=%q},'):format(field, vim.fn.keytrans(keys))
       end
-    end
+      local cmd = ('lua vim.g.atom_macro = { %s }'):format(table.concat(parts, ' '))
+      -- Draft it on the cmdline; CTRL-F opens the cmdwin to edit it.
+      vim.api.nvim_feedkeys((':%s%s'):format(cmd, vim.keycode('<C-f>')), 'n', false)
+    end)
   end)
+
 end
 
 vim.g.guh_debug = 'debug'
 vim.keymap.set('n', 'gb', function()
   require('guh.util').goto_file_at_cursor()
-end, opts)
+end)
 
 vim.cmd[[silent! source ~/.vimrc.local]]
