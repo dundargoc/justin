@@ -361,14 +361,6 @@ nvim_on({'UIEnter'}, augroup, nil, function()
   end
 end)
 
--- Enable treesitter. For c/vimscript/markdown: https://github.com/neovim/neovim/pull/32965
-nvim_on({'FileType'}, augroup, nil, function(ev)
-  if not ev.match or ev.match == '' or ev.match == 'text' then
-    vim.treesitter.stop()
-  end
-  pcall(function() vim.treesitter.start() end)
-end)
-
 vim.api.nvim_set_var('projectionist_heuristics', {
   ['package.json'] = {
     ['package.json'] = {['alternate'] = {'package-lock.json'}},
