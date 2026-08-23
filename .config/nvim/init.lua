@@ -774,6 +774,7 @@ if vim.fn.exists('##CmdAtom') == 1 then
 
   vim.api.nvim_create_autocmd('CmdAtom', {
     -- pattern = { 'motion', 'mapping' },
+    desc = 'Remembers the most-recent user action',
     group = augroup,
     ---@param ev {data: vim.event.cmdatom.data}
     callback = function(ev)
@@ -784,7 +785,7 @@ if vim.fn.exists('##CmdAtom') == 1 then
         -- Unreplayable Visual op.
       elseif atom.changed and not is_redo_or_undo and atom.lhs ~= '.' then
         last_edit = atom
-      elseif not atom.changed and not is_redo_or_undo and atom.lhs ~= ',' then
+      elseif not atom.changed and not is_redo_or_undo and not atom.lhs:match('^[,hjkl]$') then
         last_atom = atom
       elseif vim.g.debug then
         local oneline = table.concat(vim.split(vim.inspect(atom), '%s*\n%s*'), ' ')
@@ -820,9 +821,10 @@ if vim.fn.exists('##CmdAtom') == 1 then
   -- Track the last 20 atoms.
   local atom_ring = {} ---@type vim.event.cmdatom.data[]
   vim.api.nvim_create_autocmd('CmdAtom', {
+    desc = 'Remembers the 20 most-recent user actions',
+    group = augroup,
     callback = function(ev)
-      -- Skip this mapping itself, and cmdwin edits.
-      if ev.data.lhs ~= ' ' and vim.fn.getcmdwintype() == '' then
+      if not ev.data.lhs:match('^[ ,.u]$') and vim.fn.getcmdwintype() == '' then
         atom_ring[#atom_ring + 1] = ev.data
         if #atom_ring > 20 then
           table.remove(atom_ring, 1)
