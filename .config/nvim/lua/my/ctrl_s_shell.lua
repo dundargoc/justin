@@ -105,6 +105,6 @@ func! s:ctrl_s(cnt, here) abort
   let g:term_shell.prevwid = curwinid
   setlocal nobuflisted
 endfunc
-nnoremap <C-s> :<C-u>call <SID>ctrl_s(v:count, v:false)<CR>
-nnoremap '<C-s> :<C-u>call <SID>ctrl_s(v:count, v:true)<CR>
+nnoremap <C-s> <cmd>call <SID>ctrl_s(v:count, v:false)<CR>
+nnoremap '<C-s> <cmd>call <SID>ctrl_s(v:count, v:true)<CR>
 ]]
